@@ -10,6 +10,7 @@ https.Agent.defaultMaxSockets = 200;
 var db = require('mongojs').connect('geckoboard');
 
 var priorities = ["Blocker","Critical","Major","Minor","Trivial"]
+var mashPriorities = ["Critical","Medium","Minimal","Serious"]
 
 //jira data
 var jira_col = db.collection('jira_col');
@@ -20,12 +21,18 @@ console.log('graph_col initialized.');
 
 http.createServer(handler).listen("6969");
 
-function loadData(user_project, categories){
+function loadData(user_project, categories, mash){
 	var jira_data = [];
+	if(mash){
+		priorities = mashPriorities;
+	}
 	async.forEachSeries(categories, function(category, callback) {
 		async.forEachSeries(priorities, function(priority, callback) {
 			var key = category + "-" + priority;
 			var url = 'https://request.siteworx.com/rest/api/latest/search?jql=' + user_project + '=' + category + '%20AND%20priority=' + priority + '%20&maxResults=1&os_username=...gecko&os_password=S!t3w0rx123';
+			if(mash){
+				url = 'https://request.siteworx.com/rest/api/latest/search?jql=' + user_project + '=' + category + '%20AND%20cf[10101]=' + priority + '%20&maxResults=1&os_username=...gecko&os_password=S!t3w0rx123';
+			}
 			var ppu = {};
 			ppu['key'] = key;
 			ppu['user_project'] = category;
@@ -57,9 +64,10 @@ function handler(req, res) {
 	var user_proj = (user_val)?'assignee':'project';
   var categories = (user_val)?user_val.split(","):project_val.split(",");
 	var chart = u["query"]["chart"];
+	var mash = (u["query"]["mash"])?true:false;
 	var key = categories + "-" + chart;
 	try{
-		loadData(user_proj, categories);
+		loadData(user_proj, categories, mash);
 	} catch(err) {
 		res.writeHead(500, {'Content-Type':'text/plain'});
 		res.end(err.stack);
@@ -82,8 +90,12 @@ function handler(req, res) {
 				var i = 0;
 				jira_col.find({'user_project':category}).sort({priority:1}, function(err, results) {
 					async.forEachSeries(results, function(qr, callback){
-						graph.data.series[i].name = qr.priority;
-						if(j==0){graph.data.series[i].data.length = 0;}
+						if(j==0){
+							var n_d = {};
+							n_d['name'] = qr.priority;
+							n_d['data'] = [];
+							graph.data.series[i] = n_d;
+						}
 						graph.data.series[i++].data[j] = qr.value;
 						graph_col.update({key: graph.key}, graph, {upsert:true});
 						callback();

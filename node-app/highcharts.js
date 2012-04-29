@@ -35,22 +35,7 @@ var highcharts = {
         borderWidth: 0
 	  	}
 		},
-    series: [{
-	  	name: 'Trivial',
-	  	data: []
-		}, {
-	  	name: 'Minimal',
-	  	data: []
-		}, {
-	  	name: 'Major',
-	  	data: []
-		}, {
-	  	name: 'Critical',
-	  	data: []
-		}, {
-	  	name: 'Blocker',
-	  	data: []
-		}]
+    series: []
 	},
 	stackedBar:{
 		chart: {
@@ -84,22 +69,7 @@ var highcharts = {
       	stacking: 'normal'
 	  	}
 		},
-  	series: [{
-	  	name: 'Blocker',
-	  	data: []
-		}, {
-	  	name: 'Critical',
-	  	data: []
-		}, {
-	  	name: 'Major',
-	  	data: []
-		}, {
-	  name: 'Minor',
-	  data: []
-		}, {
-	  	name: 'Trivial',
-	  	data: []
-		}]
+  	series: []
 	},
 	basicColumn: {
 		chart: {
@@ -135,22 +105,7 @@ var highcharts = {
 				borderWidth: 0
 			}
 		},
-  	series: [{
-	  	name: 'Blocker',
-	  	data: []
-		}, {
-	  	name: 'Critical',
-	  	data: []
-		}, {
-	  	name: 'Major',
-	  	data: []
-		}, {
-	  name: 'Minor',
-	  data: []
-		}, {
-	  	name: 'Trivial',
-	  	data: []
-		}]
+  	series: []
 	},
 	stackedColumn: {
 		chart: {
@@ -185,22 +140,7 @@ var highcharts = {
       	stacking: 'normal'
 	  	}
 		},
-  	series: [{
-	  	name: 'Blocker',
-	  	data: []
-		}, {
-	  	name: 'Critical',
-	  	data: []
-		}, {
-	  	name: 'Major',
-	  	data: []
-		}, {
-	  name: 'Minor',
-	  data: []
-		}, {
-	  	name: 'Trivial',
-	  	data: []
-		}]
+  	series: []
 	}
 };
 exports.highcharts = highcharts;
