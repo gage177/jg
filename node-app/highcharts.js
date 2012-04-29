@@ -1,6 +1,5 @@
-var basicBar = 
-	{key:'basicBar',
-	data:{
+var highcharts = { 
+	basicBar:{
 	chart: {
    renderTo: 'container',
    defaultSeriesType: 'bar',
@@ -54,12 +53,8 @@ var basicBar =
 	  name: 'Blocker',
 	  data: []
 	}]
-}};
-exports.basicBar = basicBar;
-
-var stackedBar = 
-	{key:'stackedBar',
-	data:{
+},
+	stackedBar:{
 	chart: {
 	  renderTo: 'container',
 	  defaultSeriesType: 'bar',
@@ -108,5 +103,6 @@ var stackedBar =
 	  name: 'Trivial',
 	  data: []
 	}]
-}};
-exports.stackedBar = stackedBar;
+}
+};
+exports.highcharts = highcharts;
