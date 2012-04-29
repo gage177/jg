@@ -65,7 +65,8 @@ function handler(req, res) {
   var categories = (user_val)?user_val.split(","):project_val.split(",");
 	var chart = u["query"]["chart"];
 	var mash = (u["query"]["mash"])?true:false;
-	var key = categories + "-" + chart;
+	//var key = categories + "-" + chart;
+	var key = u.search;
 	try{
 		loadData(user_proj, categories, mash);
 	} catch(err) {
@@ -93,21 +94,20 @@ function handler(req, res) {
 						if(j==0){
 							var n_d = {};
 							n_d['name'] = qr.priority;
-							n_d['data'] = [];
+							n_d['data'] = [categories.length];
 							graph.data.series[i] = n_d;
 						}
-						graph.data.series[i++].data[j] = qr.value;
+						graph.data.series[i].data[j] = qr.value;
 						graph_col.update({key: graph.key}, graph, {upsert:true});
+						i++;
 						callback();
 					})
 					j++;
 				})
 				callback();
 			});
-			//graph_col.find({'key':key}).sort({key:1}, function(err, d) {
-				res.writeHead(200, {'Content-Type':'text/plain'});
-				res.end(JSON.stringify(g[0].data));
-			//});
+			res.writeHead(200, {'Content-Type':'text/plain'});
+			res.end(JSON.stringify(g[0].data));
 		}catch(err) {
 			res.writeHead(500, {'Content-Type':'text/plain'});
 			res.end(err.stack);
