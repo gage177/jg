@@ -9,7 +9,7 @@ http.Agent.defaultMaxSockets = 200;
 https.Agent.defaultMaxSockets = 200;
 var db = require('mongojs').connect('geckoboard');
 
-var priorities = ["Blocker","Critical","Major","Minor","Trivial"];
+var priorities = ["Blocker","Critical","Major","Minor","Trivial"]
 
 //jira data
 var jira_col = db.collection('jira_col');
