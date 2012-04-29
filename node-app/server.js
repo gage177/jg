@@ -13,8 +13,10 @@ var priorities = ["Blocker","Critical","Major","Minor","Trivial"]
 
 //jira data
 var jira_col = db.collection('jira_col');
-//cached highcharts - w/ Data
+console.log('jira_col initialized.');
+//cached highcharts
 var graph_col = db.collection('graph_col');
+console.log('graph_col initialized.');
 
 http.createServer(handler).listen("6969");
 
