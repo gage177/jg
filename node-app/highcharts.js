@@ -101,14 +101,14 @@ var highcharts = {
 	  	data: []
 		}]
 	},
-	basicColumn{
+	basicColumn: {
 		chart: {
 			renderTo: 'container',
-			type: 'column'
+			type: 'column',
 	  	backgroundColor: 'none'
 		},
 		title: {
-			text: null;
+			text: null
 		},
 		xAxis: {
 			categories: []
@@ -151,15 +151,15 @@ var highcharts = {
 	  	name: 'Trivial',
 	  	data: []
 		}]
-	}
-	stackedColumn{
+	},
+	stackedColumn: {
 		chart: {
 			renderTo: 'container',
-			type: 'column'
+			type: 'column',
 	  	backgroundColor: 'none'
 		},
 		title: {
-			text: null;
+			text: null
 		},
 		xAxis: {
 			categories: []
