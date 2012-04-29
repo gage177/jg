@@ -92,10 +92,10 @@ function handler(req, res) {
 				})
 				callback();
 			});
-			graph_col.find({'key':key}).sort({key:1}, function(err, d) {
+			//graph_col.find({'key':key}).sort({key:1}, function(err, d) {
 				res.writeHead(200, {'Content-Type':'text/plain'});
-				res.end(JSON.stringify(d[0].data));
-			});
+				res.end(JSON.stringify(g[0].data));
+			//});
 		}catch(err) {
 			res.writeHead(500, {'Content-Type':'text/plain'});
 			res.end(err.stack);
