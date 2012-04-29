@@ -57,17 +57,17 @@ function handler(req, res) {
 	var user_proj = (user_val)?'assignee':'project';
   var categories = (user_val)?user_val.split(","):project_val.split(",");
 	var chart = u["query"]["chart"];
+	var key = categories + "-" + chart;
 	try{
 		loadData(user_proj, categories);
 	} catch(err) {
 		res.writeHead(500, {'Content-Type':'text/plain'});
 		res.end(err.stack);
 	}
-	var key = categories + "-" + chart;
 	graph_col.find({'key':key},function(err,g){
 		try{
 			var graph = g[0];
-			//preload a keyed chart w/o data
+			//preload chart w/o data
 			if(g.length == 0 || g.data == null){
 				var con_graph = {};
 				con_graph['key'] = key;
