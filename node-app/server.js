@@ -45,7 +45,6 @@ function loadData(user_project, categories, mash){
 		request.get(jd.url, function(err, response, body){
 			try{
 				jd['value'] = JSON.parse(body).total;
-				//console.log(JSON.stringify(jd));
 				jira_col.update({key: jd.key}, jd, {upsert:true});
 			}catch(err){
 				console.log(err.stack);
@@ -76,13 +75,15 @@ function handler(req, res) {
 		try{
 			//var graph = g;
 			//preload chart w/o data
-			if(graph == null){
-				var con_graph = {};
-				con_graph['key'] = key;
-				con_graph['data'] = highcharts.highcharts[chart];
-				graph_col.update({key: con_graph.key}, con_graph, {upsert:true});
-				graph = con_graph;
+console.log("0"+JSON.stringify(graph));
+			if(graph == null || graph.data == null){
+				graph = {};
+				graph['key'] = key;
+				graph['data'] = highcharts.highcharts[chart];
+console.log("1"+":"+key+ ":"+ JSON.stringify(graph));
+				graph_col.update({key: graph.key}, graph, {upsert:true});
 			} 
+console.log("2"+JSON.stringify(graph));
 			//labels for xAxis
 			graph.data.xAxis.categories = categories;
 			var j = 0;
@@ -90,13 +91,14 @@ function handler(req, res) {
 				var i = 0;
 				jira_col.find({'user_project':category,'mash':mash}).sort({priority:1},function(err, results) {
 					async.forEachSeries(results, function(qr, callback){
-						if(j==0){
-							var n_d = {};
-							n_d['name'] = qr.priority;
-							n_d['data'] = new Array(categories.length);
-							graph.data.series[i] = n_d;
+						//if(j==0){
+console.log("teeeeee"+JSON.stringify(graph));
+						if(graph.data.series.length == 0){
+							graph.data.series[i] = {};
+							graph.data.series[i]['name'] = qr.priority;
+							graph.data.series[i]['data'] = [];
 						}
-						graph.data.series[i].data[j]=(qr.value)?qr.value:0;
+						graph.data.series[i].data.push(qr.value);
 						graph_col.update({key: graph.key}, graph, {upsert:true});
 						i++;
 						callback();
