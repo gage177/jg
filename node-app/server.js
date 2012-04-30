@@ -72,6 +72,7 @@ function handler(req, res) {
 	} catch(err) {
 		res.writeHead(500, {'Content-Type':'text/plain'});
 		res.end(err.stack);
+		console.log(err.stack);
 	}
 	graph_col.find({'key':key},function(err,g){
 		try{
@@ -89,12 +90,12 @@ function handler(req, res) {
 			var j = 0;
 			async.forEachSeries(categories, function(category, callback) {
 				var i = 0;
-				jira_col.find({'user_project':category}).sort({priority:1}, function(err, results) {
+				jira_col.find({'user_project':category}).sort({priority:1},function(err, results) {
 					async.forEachSeries(results, function(qr, callback){
 						if(j==0){
 							var n_d = {};
 							n_d['name'] = qr.priority;
-							n_d['data'] = [categories.length];
+							n_d['data'] = new Array(categories.length);
 							graph.data.series[i] = n_d;
 						}
 						graph.data.series[i].data[j] = qr.value;
@@ -107,10 +108,11 @@ function handler(req, res) {
 				callback();
 			});
 			res.writeHead(200, {'Content-Type':'text/plain'});
-			res.end(JSON.stringify(g[0].data));
+			res.end(JSON.stringify(g[0]));
 		}catch(err) {
 			res.writeHead(500, {'Content-Type':'text/plain'});
 			res.end(err.stack);
+			console.log(err.stack);
 		}
 	});
 	graph = {};
