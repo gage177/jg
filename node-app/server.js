@@ -9,9 +9,7 @@ http.Agent.defaultMaxSockets = 200;
 https.Agent.defaultMaxSockets = 200;
 var db = require('mongojs').connect('geckoboard');
 
-var priorities = ["Blocker","Critical","Major","Minor","Trivial"]
-var mashPriorities = ["Critical","Medium","Minimal","Serious"]
-
+var priorities;
 //jira data
 var jira_col = db.collection('jira_col');
 console.log('jira_col initialized.');
@@ -23,9 +21,6 @@ http.createServer(handler).listen("6969");
 
 function loadData(user_project, categories, mash){
 	var jira_data = [];
-	if(mash){
-		priorities = mashPriorities;
-	}
 	async.forEachSeries(categories, function(category, callback) {
 		async.forEachSeries(priorities, function(priority, callback) {
 			var key = (mash)?'mash' + "-" + category + "-" + priority:category + "-" + priority;
@@ -64,6 +59,7 @@ function handler(req, res) {
 	var chart = u["query"]["chart"];
 	var mash = (u["query"]["mash"])?true:false;
 	var key = u.search;
+	priorities =(mash)?["Critical","Medium","Minimal","Serious"]:["Blocker","Critical","Major","Minor","Trivial"]
 	try{
 		loadData(user_proj, categories, mash);
 	} catch(err) {
@@ -75,35 +71,31 @@ function handler(req, res) {
 		try{
 			//var graph = g;
 			//preload chart w/o data
-console.log("0"+JSON.stringify(graph));
 			if(graph == null || graph.data == null){
 				graph = {};
 				graph['key'] = key;
 				graph['data'] = highcharts.highcharts[chart];
-console.log("1"+":"+key+ ":"+ JSON.stringify(graph));
 				graph_col.update({key: graph.key}, graph, {upsert:true});
 			} 
-console.log("2"+JSON.stringify(graph));
 			//labels for xAxis
 			graph.data.xAxis.categories = categories;
-			var j = 0;
+			var first = true;
 			async.forEachSeries(categories, function(category, callback) {
 				var i = 0;
 				jira_col.find({'user_project':category,'mash':mash}).sort({priority:1},function(err, results) {
 					async.forEachSeries(results, function(qr, callback){
-						//if(j==0){
-console.log("teeeeee"+JSON.stringify(graph));
-						if(graph.data.series.length == 0){
+						if(first){
 							graph.data.series[i] = {};
 							graph.data.series[i]['name'] = qr.priority;
 							graph.data.series[i]['data'] = [];
 						}
+						//console.log(JSON.stringify(qr));
 						graph.data.series[i].data.push(qr.value);
 						graph_col.update({key: graph.key}, graph, {upsert:true});
 						i++;
 						callback();
 					})
-					j++;
+					first = false;
 				})
 				callback();
 			});
