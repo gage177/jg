@@ -13,17 +13,24 @@ var priorities;
 //jira data
 var jira_col = db.collection('jira_col');
 console.log('jira_col initialized.');
+
 //cached highcharts
 var graph_col = db.collection('graph_col');
 console.log('graph_col initialized.');
 
+//empty collections for testing
+jira_col.remove();
+graph_col.remove();
+console.log("jira_col & graph_col emptied for testing.");
+
+
 http.createServer(handler).listen("6969");
 
-function loadData(user_project, categories, mash){
+function loadData(user_project, categories, mash, priorities){
 	var jira_data = [];
 	async.forEachSeries(categories, function(category, callback) {
 		async.forEachSeries(priorities, function(priority, callback) {
-			var key = (mash)?'mash' + "-" + category + "-" + priority:category + "-" + priority;
+			var key = category + "-" + priority;
 			var url = (mash)?'https://request.siteworx.com/rest/api/latest/search?jql=project=MASH%20AND%20' + user_project + '=' + category + '%20AND%20cf[10101]=' + priority + '%20AND%20resolution=unresolved&maxResults=1&os_username=...gecko&os_password=S!t3w0rx123':'https://request.siteworx.com/rest/api/latest/search?jql=' + user_project + '=' + category + '%20AND%20priority=' + priority + '%20AND%20resolution=unresolved&maxResults=1&os_username=...gecko&os_password=S!t3w0rx123';
 			var ppu = {};
 			ppu['key'] = key;
@@ -59,9 +66,10 @@ function handler(req, res) {
 	var chart = u["query"]["chart"];
 	var mash = (u["query"]["mash"])?true:false;
 	var key = u.search;
-	priorities =(mash)?["Critical","Medium","Minimal","Serious"]:["Blocker","Critical","Major","Minor","Trivial"]
+	var priorities =(mash)?["Critical","Medium","Minimal","Serious"]:["Blocker","Critical","Major","Minor","Trivial"]
+	if(chart){
 	try{
-		loadData(user_proj, categories, mash);
+		loadData(user_proj, categories, mash, priorities);
 	} catch(err) {
 		res.writeHead(500, {'Content-Type':'text/plain'});
 		res.end(err.stack);
@@ -69,34 +77,40 @@ function handler(req, res) {
 	}
 	graph_col.findOne({'key':key},function(err,graph){
 		try{
-			//var graph = g;
 			//preload chart w/o data
 			if(graph == null || graph.data == null){
 				graph = {};
 				graph['key'] = key;
 				graph['data'] = highcharts.highcharts[chart];
+				var i = 0;
+				async.forEachSeries(priorities, function(priority, callback){
+					graph.data.series[i] = {};
+					graph.data.series[i]['name'] = priority;
+					graph.data.series[i]['data'] = (mash)?new Array(4):new Array(5);
+					i++;
+					callback();
+				});
 				graph_col.update({key: graph.key}, graph, {upsert:true});
 			} 
 			//labels for xAxis
 			graph.data.xAxis.categories = categories;
-			var first = true;
-			async.forEachSeries(categories, function(category, callback) {
+			var j = 0;
+			async.forEachSeries(categories, function(category, callback){
 				var i = 0;
-				jira_col.find({'user_project':category,'mash':mash}).sort({priority:1},function(err, results) {
-					async.forEachSeries(results, function(qr, callback){
-						if(first){
-							graph.data.series[i] = {};
+				(function(j) {
+					setTimeout(function() {
+						jira_col.find({'user_project':category,'mash':mash}).sort({'priority':1}).forEach(function(err, qr){
+							if(!qr) return;
 							graph.data.series[i]['name'] = qr.priority;
-							graph.data.series[i]['data'] = [];
-						}
-						//console.log(JSON.stringify(qr));
-						graph.data.series[i].data.push(qr.value);
-						graph_col.update({key: graph.key}, graph, {upsert:true});
-						i++;
-						callback();
-					})
-					first = false;
-				})
+							graph.data.series[i].data[j] = qr.value;
+							i++;
+							//console.log(j +":"+JSON.stringify(qr.key +":"+qr.value));
+							//console.log(JSON.stringify(graph.data.series));
+							graph_col.update({key: graph.key}, graph, {upsert:true});
+						});
+					},0);
+				})(j);
+				j++;
 				callback();
 			});
 			res.writeHead(200, {'Content-Type':'text/plain'});
@@ -108,5 +122,10 @@ function handler(req, res) {
 		}
 	});
 	graph = {};
+	}else{
+		res.writeHead(500, {'Content-Type':'text/plain'});
+		res.end("Missing Parameters");
+		console.log("Missing Parameters");
+	}
 }  
 console.log('Server running at http://localhost:6969/');  
