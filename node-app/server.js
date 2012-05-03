@@ -66,7 +66,7 @@ function handler(req, res) {
 	var chart = u["query"]["chart"];
 	var mash = (u["query"]["mash"])?true:false;
 	var key = u.search;
-	var priorities =(mash)?["Critical","Medium","Minimal","Serious"]:["Blocker","Critical","Major","Minor","Trivial"]
+	var priorities =(mash)?["Critical","Medium","Minimal","Serious"]:["Blocker","Critical","Major","Minor","Trivial"];
 	if(chart){
 	try{
 		loadData(user_proj, categories, mash, priorities);
@@ -83,17 +83,19 @@ function handler(req, res) {
 				graph['key'] = key;
 				graph['data'] = highcharts.highcharts[chart];
 				var i = 0;
+				
+				graph.data.series.length = 0;
 				async.forEachSeries(priorities, function(priority, callback){
 					graph.data.series[i] = {};
 					graph.data.series[i]['name'] = priority;
-					graph.data.series[i]['data'] = (mash)?new Array(4):new Array(5);
+					graph.data.series[i]['data'] = new Array(categories.length);
 					i++;
 					callback();
 				});
+				graph.data.xAxis.categories = categories;
 				graph_col.update({key: graph.key}, graph, {upsert:true});
 			} 
 			//labels for xAxis
-			graph.data.xAxis.categories = categories;
 			var j = 0;
 			async.forEachSeries(categories, function(category, callback){
 				var i = 0;
@@ -104,8 +106,6 @@ function handler(req, res) {
 							graph.data.series[i]['name'] = qr.priority;
 							graph.data.series[i].data[j] = qr.value;
 							i++;
-							//console.log(j +":"+JSON.stringify(qr.key +":"+qr.value));
-							//console.log(JSON.stringify(graph.data.series));
 							graph_col.update({key: graph.key}, graph, {upsert:true});
 						});
 					},0);
@@ -124,8 +124,8 @@ function handler(req, res) {
 	graph = {};
 	}else{
 		res.writeHead(500, {'Content-Type':'text/plain'});
-		res.end("Missing Parameters");
-		console.log("Missing Parameters");
+		res.end("Missing Parameters\n"+JSON.stringify(u));
+		console.log("Missing Parameters\n"+JSON.stringify(u));
 	}
 }  
 console.log('Server running at http://localhost:6969/');  
