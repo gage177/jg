@@ -216,7 +216,8 @@ var highcharts = {
 	basicPie: {
 		chart: {
 			renderTo: 'container',
-			plotBackgroundColor: null,
+		  	plotBackgroundColor: 'none',
+	 		backgroundColor: 'none',
 			plotBorderWidth: null,
 			plotShadow: false
 		},
@@ -234,8 +235,8 @@ var highcharts = {
 				cursor: 'pointer',
 				dataLabels: {
 					enabled: true,
-					color: '#000000',
-					connectorColor: '#000000',
+					color: '#FFFFFF',
+					connectorColor: '#333333',
 					formatter: function() {
 						return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
 					}
