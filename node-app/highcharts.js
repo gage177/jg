@@ -1,3 +1,11 @@
+var d = new Date();
+y = d.getFullYear();
+m = d.getMonth() - 1;
+if (m == 0){
+	m = 12;
+	y = y - 1;
+}
+
 var highcharts = { 
 	basicBar:{
 		chart: {
@@ -141,6 +149,69 @@ var highcharts = {
 	  	}
 		},
   	series: []
+	},
+	basicLine: {
+		chart: {
+		  renderTo: 'container',
+		  defaultSeriesType: 'line',
+		  marginRight: 0,
+		  marginBottom: 20,
+		  plotBackgroundColor: 'none',
+	 		backgroundColor: 'none',
+		  plotShadow: false
+		},
+		title: {
+	  	text: null
+		},
+		legend: {
+	  	enabled: true,
+	  	backgroundColor: '#FFFFFF',
+	  	verticalAlign: 'top'
+		},
+		xAxis: {
+	  	type: 'datetime',
+	  	gridLineColor: '#282828',
+	  	gridLineWidth: 1,
+	  	tickColor: '#444',
+	  	lineWidth: 0,
+	  	tickPixelInterval: 70
+		},
+		yAxis: {
+	  	title: {
+		  	text: null
+			},
+	  	gridLineColor: '#282828',
+	  	gridLineWidth: 1,
+	  	lineWidth: 0,
+	  	tickWidth: 1,
+	  	tickColor: '#444',
+	  	tickPixelInterval: 20,
+	  	startOnTick: false,
+	  	endOnTick: false
+  	},
+  	colors: ['#CC2121','#566301'],
+  	credits: {
+  	enabled: false
+  		},
+		plotOptions: {
+			line: {
+	  		marker: {
+	   			enabled: false
+	  		}
+			}
+ 		},
+    series: [{
+			name: 'Created',
+			data: [0],
+			pointStart: Date.UTC(y, m, d.getDate()),
+			pointInterval: 86400000 
+  	},
+ 		{
+    	name: 'Closed',
+			data: [0],
+			pointStart: Date.UTC(y, m, d.getDate()),
+			pointInterval: 86400000 
+		}]
 	}
 };
 exports.highcharts = highcharts;

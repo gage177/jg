@@ -9,6 +9,7 @@ http.Agent.defaultMaxSockets = 200;
 https.Agent.defaultMaxSockets = 200;
 var db = require('mongojs').connect('geckoboard');
 
+
 var priorities;
 //jira data
 var jira_col = db.collection('jira_col');
@@ -20,14 +21,71 @@ console.log('graph_col initialized.');
 
 //empty collections for testing
 jira_col.remove();
+console.log("jira_col emptied for testing.");
 graph_col.remove();
-console.log("jira_col & graph_col emptied for testing.");
-
+console.log("graph_col emptied for testing.");
 
 http.createServer(handler).listen("6969");
 
-function loadData(user_project, categories, mash, priorities){
-	var jira_data = [];
+function loadLine(user_project, categories, graph){
+	var tmpDay = 30;
+	for (day=-30;day<=0;day++){
+		(function(day) {
+			setTimeout(function() {
+				var keyDay = (tmpDay < 10 ? '-0' : '-') + tmpDay;
+				var key = keyDay + "-" + categories;
+				var openUrl = 'https://request.siteworx.com/rest/api/latest/search?jql='+user_project+'='+categories[0]+'%20AND%20created%3E'+day+'d%20AND%20created%3C'+(day+1)+'d&maxResults=1&os_username=...gecko&os_password=S!t3w0rx123';
+				var closedUrl = 'https://request.siteworx.com/rest/api/latest/search?jql='+user_project+'='+categories[0]+'%20AND%20status%20in%20(Resolved,%20Closed)%20AND%20created%3E'+day+'d%20AND%20created%3C'+(day+1)+'d&maxResults=1&os_username=...gecko&os_password=S!t3w0rx123';
+				var ppu = {};
+				ppu['key'] = key;
+				ppu['user_project'] = categories[0]+'-'+user_project;
+				ppu['url'] = {'open':openUrl,'closed':closedUrl};
+				request.get(ppu.url.open, function(err, response, body){
+					try{
+						ppu['openValue'] = JSON.parse(body).total;
+						jira_col.update({key: ppu.key}, ppu, {upsert:true});
+					}catch(err){
+						console.log(err.stack);
+					}
+				});
+				request.get(ppu.url.closed, function(err, response, body){
+					try{
+						ppu['closedValue'] = JSON.parse(body).total;
+						jira_col.update({key: ppu.key}, ppu, {upsert:true});
+					}catch(err){
+						console.log(err.stack);
+					}
+				});
+				tmpDay--;
+			},0);
+		})(day);
+	}	
+
+	if(graph.data.series.length == 0){
+		graph.data.series[0] = {};
+		graph.data.series[0]['data'] = [0];
+		graph.data.series[0]['name'] = 'Created -';
+		graph.data.series[1] = {};
+		graph.data.series[1]['data'] = [0];
+		graph.data.series[1]['name'] = 'Resolved - ';
+	}
+	var num = 1;
+		(function(num){
+			setTimeout(function(){
+	jira_col.find({'user_project':categories[0]+'-'+user_project}).sort({'key':-1}).forEach(function(err, qr){
+		if(!qr) return;
+		graph.data.series[0].data[num] = qr.openValue + graph.data.series[0].data[num-1] ;
+		graph.data.series[0].name = "Created - " + (qr.openValue + graph.data.series[0].data[num-1]);
+		graph.data.series[1].data[num] = qr.closedValue + graph.data.series[1].data[num-1];
+		graph.data.series[1].name = "Resolved - " + (qr.closedValue + graph.data.series[1].data[num-1]);
+		graph_col.update({key: graph.key}, graph, {upsert:true});
+		num++;
+	});
+			},0);
+		})(num);
+}
+
+function loadBar(user_project, categories, mash, priorities, graph){
 	async.forEachSeries(categories, function(category, callback) {
 		async.forEachSeries(priorities, function(priority, callback) {
 			var key = category + "-" + priority;
@@ -38,20 +96,46 @@ function loadData(user_project, categories, mash, priorities){
 			ppu['priority'] = priority;
 			ppu['url'] = url;
 			ppu['mash'] = (mash)?true:false;
-			jira_data.push(ppu);
+			request.get(ppu.url, function(err, response, body){
+				try{
+					ppu['value'] = JSON.parse(body).total;
+					jira_col.update({key: ppu.key}, ppu, {upsert:true});
+				}catch(err){
+					console.log(err.stack);
+				}
+			});
 			callback();
 		});
 		callback();
 	});
-	async.forEachSeries(jira_data, function(jd, callback) {
-		request.get(jd.url, function(err, response, body){
-			try{
-				jd['value'] = JSON.parse(body).total;
-				jira_col.update({key: jd.key}, jd, {upsert:true});
-			}catch(err){
-				console.log(err.stack);
-			}
-		});
+	
+	var i = 0;
+	if(graph.data.series.length == 0){
+	async.forEachSeries(priorities, function(priority, callback){
+		graph.data.series[i] = {};
+		graph.data.series[i]['name'] = priority;
+		graph.data.series[i]['data'] = new Array(categories.length);
+		//labels for xAxis
+		graph.data.xAxis.categories = categories;
+		i++;
+		callback();
+	});
+	}
+	
+	var j = 0;
+	async.forEachSeries(categories, function(category, callback){
+		var i = 0;
+		(function(j) {
+			setTimeout(function() {
+				jira_col.find({'user_project':category,'mash':mash}).sort({'priority':1}).forEach(function(err, qr){
+					if(!qr) return;
+					graph.data.series[i].data[j] = qr.value;
+					graph_col.update({key: graph.key}, graph, {upsert:true});
+					i++;
+				});
+			},0);
+		})(j);
+		j++;
 		callback();
 	});
 }
@@ -68,51 +152,21 @@ function handler(req, res) {
 	var key = u.search;
 	var priorities =(mash)?["Critical","Medium","Minimal","Serious"]:["Blocker","Critical","Major","Minor","Trivial"];
 	if(chart){
-	try{
-		loadData(user_proj, categories, mash, priorities);
-	} catch(err) {
-		res.writeHead(500, {'Content-Type':'text/plain'});
-		res.end(err.stack);
-		console.log(err.stack);
-	}
-	graph_col.findOne({'key':key},function(err,graph){
+		graph_col.findOne({'key':key},function(err,graph){
 		try{
 			//preload chart w/o data
 			if(graph == null || graph.data == null){
 				graph = {};
 				graph['key'] = key;
 				graph['data'] = highcharts.highcharts[chart];
-				var i = 0;
-				
 				graph.data.series.length = 0;
-				async.forEachSeries(priorities, function(priority, callback){
-					graph.data.series[i] = {};
-					graph.data.series[i]['name'] = priority;
-					graph.data.series[i]['data'] = new Array(categories.length);
-					i++;
-					callback();
-				});
-				graph.data.xAxis.categories = categories;
-				graph_col.update({key: graph.key}, graph, {upsert:true});
-			} 
-			//labels for xAxis
-			var j = 0;
-			async.forEachSeries(categories, function(category, callback){
-				var i = 0;
-				(function(j) {
-					setTimeout(function() {
-						jira_col.find({'user_project':category,'mash':mash}).sort({'priority':1}).forEach(function(err, qr){
-							if(!qr) return;
-							graph.data.series[i]['name'] = qr.priority;
-							graph.data.series[i].data[j] = qr.value;
-							i++;
-							graph_col.update({key: graph.key}, graph, {upsert:true});
-						});
-					},0);
-				})(j);
-				j++;
-				callback();
-			});
+			}
+			if(chart.indexOf("Column") != -1 || chart.indexOf("Bar") != -1){
+				loadBar(user_proj, categories, mash, priorities, graph);
+			}else if(chart.indexOf("Line") != -1){
+				loadLine(user_proj, categories, graph);
+			}
+			
 			res.writeHead(200, {'Content-Type':'text/plain'});
 			res.end(JSON.stringify(graph.data));
 		}catch(err) {
