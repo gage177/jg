@@ -140,6 +140,18 @@ function loadBar(user_project, categories, mash, priorities, graph){
 	});
 }
 
+function getStock(stock){
+	request.get(stock.url, function(err, response, body){
+		try{
+			stock.data.item[0].value = parseFloat(body.toString().split(',')[1]);
+   	 	stock.data.item[1].value = parseFloat(body.toString().split(',')[0]);
+			graph_col.update({key: stock.key}, stock, {upsert:true});
+		}catch(err){
+			console.log(err.stack);
+		}
+	});
+}
+
 function handler(req, res) {
 	var u = url.parse(req.url, true);
   var user = u["query"]["user"];
@@ -148,10 +160,24 @@ function handler(req, res) {
 	var user_proj = (user_val)?'assignee':'project';
   var categories = (user_val)?user_val.split(","):project_val.split(",");
 	var chart = u["query"]["chart"];
+	var stock = u["query"]["stock"];
 	var mash = (u["query"]["mash"])?true:false;
 	var key = u.search;
 	var priorities =(mash)?["Critical","Medium","Minimal","Serious"]:["Blocker","Critical","Major","Minor","Trivial"];
-	if(chart){
+	if(stock){
+		graph_col.findOne({'key':key},function(err,graph){
+			if(graph == null || graph.data == null){
+				graph = {};
+				graph['key'] = key;
+				graph['data'] = { "item" : [{"text" : "", "value" : 0},{"text" : "", "value" : 0}]};
+				graph['url'] = 'http://download.finance.yahoo.com/d/quotes.html?s=' + stock + '&f=ol1';
+			}
+			getStock(graph);
+			res.writeHead(200, {'Content-Type':'text/plain'});
+			res.end(JSON.stringify(graph.data));
+		});
+		graph = {};
+	}else if(chart){
 		graph_col.findOne({'key':key},function(err,graph){
 		try{
 			//preload chart w/o data
