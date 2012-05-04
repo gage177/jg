@@ -8,7 +8,13 @@ var highcharts = require('./highcharts');
 http.Agent.defaultMaxSockets = 200;
 https.Agent.defaultMaxSockets = 200;
 var db = require('mongojs').connect('geckoboard');
-
+var d = new Date();
+y = d.getFullYear();
+m = d.getMonth() - 1;
+if (m == 0){
+	m = 12;
+	y = y - 1;
+}
 
 var priorities;
 //jira data
@@ -65,9 +71,13 @@ function loadLine(user_project, categories, graph){
 		graph.data.series[0] = {};
 		graph.data.series[0]['data'] = [0];
 		graph.data.series[0]['name'] = 'Created -';
+		graph.data.series[0]['pointStart'] = Date.UTC(y, m, d.getDate());
+	  graph.data.series[0]['pointInterval'] = 86400000;
 		graph.data.series[1] = {};
 		graph.data.series[1]['data'] = [0];
 		graph.data.series[1]['name'] = 'Resolved - ';
+		graph.data.series[1]['pointStart'] = Date.UTC(y, m, d.getDate());
+	  graph.data.series[1]['pointInterval'] = 86400000;
 	}
 	var num = 1;
 		(function(num){
@@ -140,6 +150,45 @@ function loadBar(user_project, categories, mash, priorities, graph){
 	});
 }
 
+function loadPie(user_project, categories, mash, priorities, graph){
+	async.forEachSeries(categories, function(category, callback) {
+		async.forEachSeries(priorities, function(priority, callback) {
+			var key = category + "-" + priority;
+			var url = (mash)?'https://request.siteworx.com/rest/api/latest/search?jql=project=MASH%20AND%20' + user_project + '=' + category + '%20AND%20cf[10101]=' + priority + '%20AND%20resolution=unresolved&maxResults=1&os_username=...gecko&os_password=S!t3w0rx123':'https://request.siteworx.com/rest/api/latest/search?jql=' + user_project + '=' + category + '%20AND%20priority=' + priority + '%20AND%20resolution=unresolved&maxResults=1&os_username=...gecko&os_password=S!t3w0rx123';
+			var ppu = {};
+			ppu['key'] = key;
+			ppu['user_project'] = category;
+			ppu['priority'] = priority;
+			ppu['url'] = url;
+			ppu['mash'] = (mash)?true:false;
+			request.get(ppu.url, function(err, response, body){
+				try{
+					ppu['value'] = JSON.parse(body).total;
+					jira_col.update({key: ppu.key}, ppu, {upsert:true});
+				}catch(err){
+					console.log(err.stack);
+				}
+			});
+			callback();
+		});
+		callback();
+	});
+  if(graph.data.series.length == 0){	
+	graph.data.series[0] = {};
+	graph.data.series[0]['type'] = 'pie';
+	graph.data.series[0]['name'] = '';
+	graph.data.series[0]['data'] = new Array(categories.length);
+	}
+	
+	var j = 0;
+	jira_col.find({'user_project':categories[0],'mash':mash}).sort({'priority':1}).forEach(function(err, qr){
+		if(!qr) return;
+		graph.data.series[0].data[j] = [qr.priority, qr.value];
+		graph_col.update({key: graph.key}, graph, {upsert:true});
+		j++;
+	});
+}
+
 function getStock(stock){
 	request.get(stock.url, function(err, response, body){
 		try{
@@ -191,6 +240,8 @@ function handler(req, res) {
 				loadBar(user_proj, categories, mash, priorities, graph);
 			}else if(chart.indexOf("Line") != -1){
 				loadLine(user_proj, categories, graph);
+			}else if(chart.indexOf("Pie") != -1){
+				loadPie(user_proj, categories, mash, priorities, graph);
 			}
 			
 			res.writeHead(200, {'Content-Type':'text/plain'});
